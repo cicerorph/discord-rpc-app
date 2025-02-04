@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Discord RPC | MubiLop</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #36393f;
+            color: #ffffff;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 95vh;
+        }
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+        }
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            max-width: 100%;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #202225;
+            background-color: #40444b;
+            color: #ffffff;
+        }
+        button {
+            background-color: #7289da;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #677bc4;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #43b581;
+        }
+        .error {
+            background-color: #f04747;
+        }
+        .http-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #2f3136;
+            border-radius: 4px;
+        }
+        code {
+            background-color: #202225;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        .console {
+            background-color: #2f3136;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Consolas', monospace;
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .console-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        .console-info {
+            color: #7289da;
+        }
+        .console-success {
+            color: #43b581;
+        }
+        .console-error {
+            color: #f04747;
+        }
+        .console-request {
+            color: #faa61a;
+        }
+        .timestamp {
+            color: #72767d;
+            margin-right: 8px;
+        }
+        .clear-console {
+            margin-top: 10px;
+            background-color: #2f3136;
+            border: 1px solid #72767d;
+        }
+        .clear-console:hover {
+            background-color: #40444b;
+        }
+    </style>
+</head>
+<body>
+    <div class="left-panel">
+        <div class="container">
+            <h1>Discord RPC | MubiLop.tech</h1>
+            <div id="status"></div>
+            
+            <div class="form-group">
+                <label for="clientId">Discord Client ID:</label>
+                <input type="text" id="clientId" name="clientId">
+                <button id="setClientId">Set Client ID</button>
+            </div>
+
+            <form id="presence-form">
+                <div class="form-group">
+                    <label for="details">Details (First line):</label>
+                    <input type="text" id="details" name="details">
+                </div>
+                <div class="form-group">
+                    <label for="state">State (Second line):</label>
+                    <input type="text" id="state" name="state">
+                </div>
+                <div class="form-group">
+                    <label for="largeImageKey">Large Image Key:</label>
+                    <input type="text" id="largeImageKey" name="largeImageKey">
+                </div>
+                <div class="form-group">
+                    <label for="largeImageText">Large Image Text:</label>
+                    <input type="text" id="largeImageText" name="largeImageText">
+                </div>
+                <button type="submit">Update Presence</button>
+            </form>
+
+            <div class="http-info">
+                <h3>HTTP API Usage</h3>
+                <p>Server running at: <code>http://localhost:51789</code></p>
+                <p>Set Client ID: <code>POST /set-client-id</code></p>
+                <p>Update Presence: <code>POST /update-presence</code></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="right-panel">
+        <h2>Console</h2>
+        <div class="console" id="console">
+        </div>
+        <button class="clear-console" id="clearConsole">Clear Console</button>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const status = document.getElementById('status');
+        const form = document.getElementById('presence-form');
+        const clientIdInput = document.getElementById('clientId');
+        const setClientIdButton = document.getElementById('setClientId');
+        const consoleElement = document.getElementById('console');
+        const clearConsoleButton = document.getElementById('clearConsole');
+
+        function addConsoleEntry(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `console-entry console-${type}`;
+            
+            const timestamp = document.createElement('span');
+            timestamp.className = 'timestamp';
+            timestamp.textContent = new Date().toLocaleTimeString();
+            
+            const messageSpan = document.createElement('span');
+            messageSpan.textContent = message;
+            
+            entry.appendChild(timestamp);
+            entry.appendChild(messageSpan);
+            
+            consoleElement.appendChild(entry);
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+        }
+
+        clearConsoleButton.addEventListener('click', () => {
+            consoleElement.innerHTML = '';
+            addConsoleEntry('Console cleared', 'info');
+        });
+
+        addConsoleEntry('Application started', 'info');
+        addConsoleEntry('Waiting for Discord client ID...', 'info');
+
+        ipcRenderer.on('discord-connected', (event, clientId) => {
+            status.textContent = `Connected to Discord with Client ID: ${clientId}`;
+            status.className = 'success';
+            addConsoleEntry(`Connected to Discord with Client ID: ${clientId}`, 'success');
+        });
+
+        ipcRenderer.on('discord-error', (event, message) => {
+            status.textContent = 'Error: ' + message;
+            status.className = 'error';
+            addConsoleEntry(`Discord Error: ${message}`, 'error');
+        });
+
+        ipcRenderer.on('presence-updated', (event, data) => {
+            status.textContent = 'Presence updated successfully!';
+            status.className = 'success';
+            addConsoleEntry(`Presence updated: ${JSON.stringify(data)}`, 'success');
+        });
+
+        ipcRenderer.on('presence-error', (event, message) => {
+            status.textContent = 'Error updating presence: ' + message;
+            status.className = 'error';
+            addConsoleEntry(`Presence Error: ${message}`, 'error');
+        });
+
+        ipcRenderer.on('client-id-updated', (event, clientId) => {
+            clientIdInput.value = clientId;
+            addConsoleEntry(`Client ID updated to: ${clientId}`, 'info');
+        });
+
+        // HTTP request logging
+        const originalFetch = window.fetch;
+        window.fetch = async (...args) => {
+            const [url, options] = args;
+            addConsoleEntry(`HTTP ${options.method} request to ${url}`, 'request');
+            try {
+                const response = await originalFetch(...args);
+                const clone = response.clone();
+                const data = await clone.json();
+                addConsoleEntry(`Response: ${JSON.stringify(data)}`, 'info');
+                return response;
+            } catch (error) {
+                addConsoleEntry(`HTTP Error: ${error.message}`, 'error');
+                throw error;
+            }
+        };
+
+        setClientIdButton.addEventListener('click', () => {
+            const clientId = clientIdInput.value.trim();
+            if (clientId) {
+                addConsoleEntry(`Setting Client ID to: ${clientId}`, 'info');
+                ipcRenderer.send('set-client-id', clientId);
+            }
+        });
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const presenceData = {};
+            
+            for (const [key, value] of formData.entries()) {
+                if (value) presenceData[key] = value;
+            }
+
+            presenceData.startTimestamp = Date.now();
+            addConsoleEntry(`Updating presence: ${JSON.stringify(presenceData)}`, 'info');
+            ipcRenderer.send('update-presence', presenceData);
+        });
+    </script>
+</body>
+</html>
