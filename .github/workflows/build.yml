@@ -26,14 +26,12 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-node-
 
-    - name: Use GitHub Token for Authentication
-      run: |
-        export GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
-
     - name: Install Dependencies
       run: npm ci
 
     - name: Build Electron App
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: npm exec electron-builder
 
     - name: Upload Build Artifact
