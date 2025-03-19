@@ -16,7 +16,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '18.x'
+        node-version: '21.x'
 
     - name: Cache node modules
       uses: actions/cache@v3
@@ -25,6 +25,10 @@ jobs:
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-
+
+    - name: Use GitHub Token for Authentication
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token 
 
     - name: Install Dependencies
       run: npm ci
