@@ -30,7 +30,7 @@ jobs:
       run: npm ci
 
     - name: Build Electron App
-      run: npm run build
+      run: npm exec electron-builder
 
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4
